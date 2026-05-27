@@ -1,52 +1,92 @@
 "use client";
 
 import {
-  CheckCircle2,
-  Circle,
   Download,
+  Plus,
   Printer,
   RotateCcw,
+  type LucideIcon,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { storyboardShots } from "@/data/storyboard";
+import { storyboardShots, type StoryboardShot } from "@/data/storyboard";
 
 type Filter = "all" | "pending" | "done";
+type SavedChecklist = {
+  shots: StoryboardShot[];
+  completed: Record<string, boolean>;
+};
 
-const STORAGE_KEY = "storyboard-shot-checklist:v1";
+const STORAGE_KEY = "storyboard-shot-checklist:v2";
+const LEGACY_STORAGE_KEY = "storyboard-shot-checklist:v1";
 
-export default function Home() {
-  const [completed, setCompleted] = useState<Record<string, boolean>>(() => {
-    if (typeof window === "undefined") {
-      return {};
-    }
+function getInitialChecklist(): SavedChecklist {
+  if (typeof window === "undefined") {
+    return {
+      shots: storyboardShots,
+      completed: {},
+    };
+  }
 
-    const saved = window.localStorage.getItem(STORAGE_KEY);
+  const saved = window.localStorage.getItem(STORAGE_KEY);
 
-    if (!saved) {
-      return {};
-    }
-
+  if (saved) {
     try {
-      return JSON.parse(saved);
+      const parsed = JSON.parse(saved) as Partial<SavedChecklist>;
+
+      if (Array.isArray(parsed.shots)) {
+        return {
+          shots: parsed.shots,
+          completed: parsed.completed ?? {},
+        };
+      }
     } catch {
       window.localStorage.removeItem(STORAGE_KEY);
-      return {};
     }
-  });
+  }
+
+  const legacyCompleted = window.localStorage.getItem(LEGACY_STORAGE_KEY);
+
+  if (legacyCompleted) {
+    try {
+      return {
+        shots: storyboardShots,
+        completed: JSON.parse(legacyCompleted),
+      };
+    } catch {
+      window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+    }
+  }
+
+  return {
+    shots: storyboardShots,
+    completed: {},
+  };
+}
+
+export default function Home() {
+  const [{ shots, completed }, setChecklist] =
+    useState<SavedChecklist>(getInitialChecklist);
   const [filter, setFilter] = useState<Filter>("all");
 
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(completed));
-  }, [completed]);
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        shots,
+        completed,
+      }),
+    );
+  }, [shots, completed]);
 
-  const completedCount = storyboardShots.filter((shot) => completed[shot.id]).length;
-  const totalCount = storyboardShots.length;
-  const progress = Math.round((completedCount / totalCount) * 100);
+  const completedCount = shots.filter((shot) => completed[shot.id]).length;
+  const totalCount = shots.length;
+  const progress = totalCount
+    ? Math.round((completedCount / totalCount) * 100)
+    : 0;
 
   const visibleShots = useMemo(() => {
-    const pending = storyboardShots.filter((shot) => !completed[shot.id]);
-    const done = storyboardShots.filter((shot) => completed[shot.id]);
-    const ordered = [...pending, ...done];
+    const pending = shots.filter((shot) => !completed[shot.id]);
+    const done = shots.filter((shot) => completed[shot.id]);
 
     if (filter === "pending") {
       return pending;
@@ -56,30 +96,84 @@ export default function Home() {
       return done;
     }
 
-    return ordered;
-  }, [completed, filter]);
+    return [...pending, ...done];
+  }, [completed, filter, shots]);
+
+  function updateShot(
+    id: string,
+    field: keyof Omit<StoryboardShot, "id">,
+    value: string | string[],
+  ) {
+    setChecklist((current) => ({
+      ...current,
+      shots: current.shots.map((shot) =>
+        shot.id === id
+          ? {
+              ...shot,
+              [field]: value,
+            }
+          : shot,
+      ),
+    }));
+  }
 
   function toggleShot(id: string) {
-    setCompleted((current) => ({
+    setChecklist((current) => ({
       ...current,
-      [id]: !current[id],
+      completed: {
+        ...current.completed,
+        [id]: !current.completed[id],
+      },
     }));
+  }
+
+  function addFrame() {
+    const nextNumber = String(shots.length + 1).padStart(2, "0");
+    const id =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `frame-${Date.now()}`;
+
+    setChecklist((current) => ({
+      ...current,
+      shots: [
+        ...current.shots,
+        {
+          id,
+          frame: nextNumber,
+          title: "New Frame",
+          scene: "",
+          setup: "",
+          script: "",
+          preparation: [""],
+          capture: [""],
+          estimatedDuration: "",
+          notes: "",
+        },
+      ],
+    }));
+
+    setFilter("all");
   }
 
   function resetChecklist() {
     const confirmed = window.confirm(
-      "Reset the storyboard checklist? This will clear all completed shots.",
+      "Reset the storyboard checklist? This will restore the original frames and clear completed shots.",
     );
 
     if (confirmed) {
-      setCompleted({});
+      setChecklist({
+        shots: storyboardShots,
+        completed: {},
+      });
       window.localStorage.removeItem(STORAGE_KEY);
+      window.localStorage.removeItem(LEGACY_STORAGE_KEY);
       setFilter("all");
     }
   }
 
   function exportChecklist() {
-    const payload = storyboardShots.map((shot) => ({
+    const payload = shots.map((shot) => ({
       ...shot,
       done: Boolean(completed[shot.id]),
     }));
@@ -98,7 +192,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-[#f4f7f6] text-[#132120]">
       <section className="sticky top-0 z-20 border-b border-[#d8e1de] bg-[#f4f7f6]/95 backdrop-blur no-print">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-5 px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="font-mono text-xs uppercase tracking-[0.18em] text-[#54706a]">
@@ -109,7 +203,8 @@ export default function Home() {
               </h1>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:justify-end">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
+              <ActionButton onClick={addFrame} label="New frame" icon={Plus} />
               <ActionButton onClick={exportChecklist} label="Export JSON" icon={Download} />
               <ActionButton onClick={() => window.print()} label="Print" icon={Printer} />
               <ActionButton onClick={resetChecklist} label="Reset" icon={RotateCcw} />
@@ -154,82 +249,145 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <section className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8">
         <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm font-medium text-[#54706a]">
             Showing {visibleShots.length} {visibleShots.length === 1 ? "shot" : "shots"}
           </p>
           <p className="text-sm text-[#6a7d79]">
-            Pending shots stay first; completed shots keep their storyboard order below.
+            Editable table. Pending rows stay first; completed rows keep their frame order below.
           </p>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-2">
-          {visibleShots.map((shot) => {
-            const isDone = Boolean(completed[shot.id]);
+        <div className="overflow-hidden rounded-lg border border-[#c8d8d4] bg-white shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1320px] border-collapse text-left text-sm">
+              <thead className="sticky top-[186px] z-10 bg-[#eaf2ef] text-xs uppercase tracking-[0.12em] text-[#49635e]">
+                <tr>
+                  <Th className="w-24">Done</Th>
+                  <Th className="w-24">Frame</Th>
+                  <Th className="w-44">Title</Th>
+                  <Th className="w-52">Scene</Th>
+                  <Th className="w-64">Setup</Th>
+                  <Th className="w-80">VO / Script</Th>
+                  <Th className="w-72">Preparation</Th>
+                  <Th className="w-72">Shots to capture</Th>
+                  <Th className="w-36">Duration</Th>
+                  <Th className="w-72">Notes</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleShots.map((shot) => {
+                  const isDone = Boolean(completed[shot.id]);
 
-            return (
-              <article
-                key={shot.id}
-                className={`print-break-inside-avoid rounded-lg border bg-white p-4 shadow-sm transition sm:p-5 ${
-                  isDone
-                    ? "border-[#dde4e1] opacity-60"
-                    : "border-[#c8d8d4] shadow-[#d5dfdc]/60"
-                }`}
-              >
-                <div className="flex gap-4">
-                  <button
-                    type="button"
-                    onClick={() => toggleShot(shot.id)}
-                    className="mt-1 flex size-10 shrink-0 items-center justify-center rounded-lg border border-[#cbd9d5] text-[#0f766e] transition hover:bg-[#ecf5f3] focus:outline-none focus:ring-2 focus:ring-[#0f766e] focus:ring-offset-2 no-print"
-                    aria-label={
-                      isDone
-                        ? `Mark frame ${shot.frame} as pending`
-                        : `Mark frame ${shot.frame} as done`
-                    }
-                  >
-                    {isDone ? <CheckCircle2 size={22} /> : <Circle size={22} />}
-                  </button>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#0f766e]">
-                          Frame {shot.frame}
-                        </p>
-                        <h2 className="mt-1 text-xl font-semibold text-[#10201e]">
-                          {shot.title}
-                        </h2>
-                      </div>
-                      <span
-                        className={`rounded-md px-2.5 py-1 text-xs font-semibold ${
-                          isDone
-                            ? "bg-[#e8eeee] text-[#61716d]"
-                            : "bg-[#dff3ef] text-[#0f5d58]"
-                        }`}
-                      >
-                        {isDone ? "Done" : "Pending"}
-                      </span>
-                    </div>
-
-                    <dl className="mt-4 grid gap-4">
-                      <InfoRow label="Scene" value={shot.scene} />
-                      <InfoRow label="Setup" value={shot.setup} />
-                      <ScriptBlock value={shot.script} />
-                      <InfoList label="Preparation" items={shot.preparation} />
-                      <InfoList label="Shots to capture" items={shot.capture} />
-                      <InfoRow label="Estimated duration" value={shot.estimatedDuration} />
-                      <InfoRow label="Notes" value={shot.notes} />
-                    </dl>
-                  </div>
-                </div>
-              </article>
-            );
-          })}
+                  return (
+                    <tr
+                      key={shot.id}
+                      className={`border-t border-[#dde7e4] align-top transition ${
+                        isDone ? "bg-[#f3f5f4] text-[#71827e]" : "bg-white"
+                      }`}
+                    >
+                      <td className="p-3">
+                        <label className="inline-flex items-center gap-2 text-sm font-medium text-[#304844]">
+                          <input
+                            type="checkbox"
+                            checked={isDone}
+                            onChange={() => toggleShot(shot.id)}
+                            className="size-5 accent-[#0f766e]"
+                            aria-label={`Mark frame ${shot.frame} ${isDone ? "pending" : "done"}`}
+                          />
+                          <span>{isDone ? "Done" : "Pending"}</span>
+                        </label>
+                      </td>
+                      <td className="p-3">
+                        <EditableInput
+                          value={shot.frame}
+                          label={`Frame number for ${shot.title}`}
+                          onChange={(value) => updateShot(shot.id, "frame", value)}
+                        />
+                      </td>
+                      <td className="p-3">
+                        <EditableInput
+                          value={shot.title}
+                          label={`Title for frame ${shot.frame}`}
+                          onChange={(value) => updateShot(shot.id, "title", value)}
+                        />
+                      </td>
+                      <td className="p-3">
+                        <EditableTextarea
+                          value={shot.scene}
+                          label={`Scene for frame ${shot.frame}`}
+                          onChange={(value) => updateShot(shot.id, "scene", value)}
+                          rows={3}
+                        />
+                      </td>
+                      <td className="p-3">
+                        <EditableTextarea
+                          value={shot.setup}
+                          label={`Setup for frame ${shot.frame}`}
+                          onChange={(value) => updateShot(shot.id, "setup", value)}
+                          rows={3}
+                        />
+                      </td>
+                      <td className="p-3">
+                        <EditableTextarea
+                          value={shot.script}
+                          label={`VO script for frame ${shot.frame}`}
+                          onChange={(value) => updateShot(shot.id, "script", value)}
+                          rows={5}
+                        />
+                      </td>
+                      <td className="p-3">
+                        <EditableTextarea
+                          value={shot.preparation.join("\n")}
+                          label={`Preparation for frame ${shot.frame}`}
+                          onChange={(value) =>
+                            updateShot(shot.id, "preparation", splitLines(value))
+                          }
+                          rows={5}
+                        />
+                      </td>
+                      <td className="p-3">
+                        <EditableTextarea
+                          value={shot.capture.join("\n")}
+                          label={`Shots to capture for frame ${shot.frame}`}
+                          onChange={(value) =>
+                            updateShot(shot.id, "capture", splitLines(value))
+                          }
+                          rows={5}
+                        />
+                      </td>
+                      <td className="p-3">
+                        <EditableInput
+                          value={shot.estimatedDuration}
+                          label={`Duration for frame ${shot.frame}`}
+                          onChange={(value) =>
+                            updateShot(shot.id, "estimatedDuration", value)
+                          }
+                        />
+                      </td>
+                      <td className="p-3">
+                        <EditableTextarea
+                          value={shot.notes}
+                          label={`Notes for frame ${shot.frame}`}
+                          onChange={(value) => updateShot(shot.id, "notes", value)}
+                          rows={5}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
     </main>
   );
+}
+
+function splitLines(value: string) {
+  return value.split("\n");
 }
 
 function ActionButton({
@@ -237,7 +395,7 @@ function ActionButton({
   label,
   onClick,
 }: {
-  icon: typeof Download;
+  icon: LucideIcon;
   label: string;
   onClick: () => void;
 }) {
@@ -253,44 +411,57 @@ function ActionButton({
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+function Th({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <div>
-      <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b7f7a]">
-        {label}
-      </dt>
-      <dd className="mt-1 text-sm leading-6 text-[#263936]">{value}</dd>
-    </div>
+    <th className={`border-r border-[#d3dfdc] px-3 py-3 font-semibold ${className}`}>
+      {children}
+    </th>
   );
 }
 
-function ScriptBlock({ value }: { value: string }) {
+function EditableInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
   return (
-    <div className="rounded-lg border border-[#cdded9] bg-[#f3faf8] p-3">
-      <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0f5d58]">
-        VO / Script
-      </dt>
-      <dd className="mt-2 text-sm leading-6 text-[#203431]">{value}</dd>
-    </div>
+    <input
+      aria-label={label}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      className="min-h-10 w-full rounded-md border border-[#cbd9d5] bg-white px-3 py-2 text-sm text-[#203431] shadow-inner outline-none transition focus:border-[#0f766e] focus:ring-2 focus:ring-[#bfe3dc]"
+    />
   );
 }
 
-function InfoList({ label, items }: { label: string; items: string[] }) {
+function EditableTextarea({
+  label,
+  value,
+  onChange,
+  rows,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  rows: number;
+}) {
   return (
-    <div>
-      <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b7f7a]">
-        {label}
-      </dt>
-      <dd className="mt-2">
-        <ul className="grid gap-1.5 text-sm leading-6 text-[#263936]">
-          {items.map((item) => (
-            <li key={item} className="flex gap-2">
-              <span className="mt-2 size-1.5 shrink-0 rounded-full bg-[#0f766e]" />
-              <span>{item}</span>
-            </li>
-          ))}
-        </ul>
-      </dd>
-    </div>
+    <textarea
+      aria-label={label}
+      value={value}
+      rows={rows}
+      onChange={(event) => onChange(event.target.value)}
+      className="w-full resize-y rounded-md border border-[#cbd9d5] bg-white px-3 py-2 text-sm leading-5 text-[#203431] shadow-inner outline-none transition focus:border-[#0f766e] focus:ring-2 focus:ring-[#bfe3dc]"
+    />
   );
 }
