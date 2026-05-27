@@ -4,6 +4,7 @@ export type StoryboardShot = {
   title: string;
   scene: string;
   setup: string;
+  script: string;
   preparation: string[];
   capture: string[];
   estimatedDuration: string;
@@ -17,6 +18,8 @@ export const storyboardShots: StoryboardShot[] = [
     title: "Opening",
     scene: "Opening",
     setup: "Wide shot - call center floor, advocates at work",
+    script:
+      "VO: Every great member experience starts with advocates who have the right information at the right moment.",
     preparation: [
       "Call center floor ready",
       "Advocates seated and actively working",
@@ -36,6 +39,8 @@ export const storyboardShots: StoryboardShot[] = [
     title: "Site Director",
     scene: "Site Director Interview",
     setup: "Site Director on-camera, interview style, conversational",
+    script:
+      "Site Director: Agent Assist helps our teams move with more confidence, giving advocates faster access to the guidance they need while they support members.",
     preparation: [
       "Site Director confirmed",
       "Interview area prepared",
@@ -55,6 +60,8 @@ export const storyboardShots: StoryboardShot[] = [
     title: "B-Roll",
     scene: "Screen capture / over-the-shoulder",
     setup: "Over-the-shoulder shot of Agent Assist in CRM",
+    script:
+      "VO: Inside the CRM, Agent Assist surfaces answers, prompts, and summaries in the flow of the conversation.",
     preparation: [
       "Confirm if real UI is approved or use recreated mockup",
       "CRM screen ready",
@@ -76,6 +83,8 @@ export const storyboardShots: StoryboardShot[] = [
     title: "Training Director",
     scene: "Future Features",
     setup: "Training Director interview about 2026 features",
+    script:
+      "Training Director: As we look ahead, features like guided workflows, task automation, and real-time coaching will help advocates keep improving with every interaction.",
     preparation: [
       "Training Director confirmed",
       "Feature cards/motion graphics prepared",
@@ -97,6 +106,8 @@ export const storyboardShots: StoryboardShot[] = [
     title: "Advocate 1",
     scene: "Advocate Testimonial 1",
     setup: "Confidence and accuracy testimonial",
+    script:
+      "Advocate 1: It helps me feel more confident because I can find the right answer faster and stay focused on the member.",
     preparation: ["Advocate 1 confirmed", "Workstation ready"],
     capture: [
       "Interview setup near workstation",
@@ -111,6 +122,8 @@ export const storyboardShots: StoryboardShot[] = [
     title: "Advocate 2",
     scene: "Advocate Testimonial 2",
     setup: "Ask Me Anything and complex calls",
+    script:
+      "Advocate 2: When a call gets complex, Ask Me Anything gives me a place to check guidance quickly without losing the conversation.",
     preparation: [
       "Advocate 2 confirmed",
       "Ask Me Anything mockup or live demo ready",
@@ -129,6 +142,8 @@ export const storyboardShots: StoryboardShot[] = [
     title: "Advocate 3",
     scene: "Advocate Testimonial 3",
     setup: "Post-call summary and efficiency",
+    script:
+      "Advocate 3: The post-call summary saves time and helps me wrap up accurately so I can be ready for the next member.",
     preparation: ["Advocate 3 confirmed", "Post-call summary screen ready"],
     capture: [
       "Warm interview setup",
@@ -144,6 +159,8 @@ export const storyboardShots: StoryboardShot[] = [
     title: "Advocate 4",
     scene: "Advocate Testimonial 4",
     setup: "Interaction 360 and member connection",
+    script:
+      "Advocate 4: Interaction 360 gives me more context, so I can make the experience feel personal and connected.",
     preparation: ["Advocate 4 confirmed", "Interaction 360 panel ready"],
     capture: [
       "Interview style shot",
@@ -159,6 +176,8 @@ export const storyboardShots: StoryboardShot[] = [
     title: "Senior Ops Manager",
     scene: "Senior Ops Manager Testimonial",
     setup: "Advocate development and coaching",
+    script:
+      "Senior Ops Manager: Agent Assist gives us better visibility into where advocates need support and where coaching can make the biggest impact.",
     preparation: [
       "Senior Ops Manager confirmed",
       "Coaching room or conference room ready",
@@ -177,6 +196,8 @@ export const storyboardShots: StoryboardShot[] = [
     title: "Ops VP",
     scene: "Closing",
     setup: "Ops VP closing statement on call center floor",
+    script:
+      "Ops VP: This is about empowering our advocates, strengthening our operations, and creating better experiences for every member we serve.",
     preparation: [
       "Ops VP confirmed",
       "Floor background active but controlled",
@@ -197,6 +218,8 @@ export const storyboardShots: StoryboardShot[] = [
     title: "End Card",
     scene: "End Card",
     setup: "Branded end card with tagline",
+    script:
+      "SUPER / VO: Agent Assist. Helping advocates deliver smarter, faster, more connected member experiences.",
     preparation: [
       "ResultsCX logo",
       "Humana logo",

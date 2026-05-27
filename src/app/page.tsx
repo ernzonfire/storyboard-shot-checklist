@@ -215,6 +215,7 @@ export default function Home() {
                     <dl className="mt-4 grid gap-4">
                       <InfoRow label="Scene" value={shot.scene} />
                       <InfoRow label="Setup" value={shot.setup} />
+                      <ScriptBlock value={shot.script} />
                       <InfoList label="Preparation" items={shot.preparation} />
                       <InfoList label="Shots to capture" items={shot.capture} />
                       <InfoRow label="Estimated duration" value={shot.estimatedDuration} />
@@ -259,6 +260,17 @@ function InfoRow({ label, value }: { label: string; value: string }) {
         {label}
       </dt>
       <dd className="mt-1 text-sm leading-6 text-[#263936]">{value}</dd>
+    </div>
+  );
+}
+
+function ScriptBlock({ value }: { value: string }) {
+  return (
+    <div className="rounded-lg border border-[#cdded9] bg-[#f3faf8] p-3">
+      <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0f5d58]">
+        VO / Script
+      </dt>
+      <dd className="mt-2 text-sm leading-6 text-[#203431]">{value}</dd>
     </div>
   );
 }
